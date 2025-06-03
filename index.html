@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>LeetCode Dashboard | CodePulse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", sans-serif;
+      background-color: #f5f5f5;
+      color: #333;
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark-mode {
+      background-color: #1c1c1c;
+      color: #eee;
+    }
+    .container {
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      transition: background 0.3s, color 0.3s;
+    }
+    .dark-mode .container {
+      background: #2c2c2c;
+    }
+    input, button {
+      padding: 10px;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button {
+      background: #ffa116;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    #toggleMode {
+      float: right;
+      margin-top: -2rem;
+    }
+    canvas {
+      margin-top: 20px;
+    }
+    .topics {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .topic {
+      background: #ddd;
+      padding: 5px 10px;
+      border-radius: 8px;
+    }
+    .dark-mode .topic {
+      background: #444;
+      color: #fff;
+    }
+    .heatmap {
+      display: grid;
+      grid-template-columns: repeat(30, 10px);
+      gap: 2px;
+      margin: 20px 0;
+      justify-content: center;
+    }
+    .cell {
+      width: 10px;
+      height: 10px;
+      background-color: #eee;
+    }
+    .level-1 { background-color: #d6e685; }
+    .level-2 { background-color: #8cc665; }
+    .level-3 { background-color: #44a340; }
+    .level-4 { background-color: #1e6823; }
+    .dark-mode .cell {
+      border: 1px solid #444;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <button id="toggleMode" onclick="toggleDarkMode()">🌙</button>
+    <h1>📊 LeetCode Dashboard - CodePulse</h1>
+    <input type="text" id="username" placeholder="Enter LeetCode Username" />
+    <button onclick="fetchLeetCodeData()">Submit</button>
+    <div id="output" style="display:none;">
+      <h2 id="userDisplay"></h2>
+      <p id="rating"></p>
+      <p id="solved"></p>
+
+      <canvas id="difficultyChart" height="150"></canvas>
+      <canvas id="trendChart" height="100"></canvas>
+
+      <h3>🗓️ Activity Heatmap</h3>
+      <div class="heatmap" id="heatmap"></div>
+
+      <h3>🏷️ Topics Covered</h3>
+      <div class="topics" id="topicsList"></div>
+    </div>
+  </div>
+
+  <script>
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    function generateHeatmap() {
+      const heatmap = document.getElementById("heatmap");
+      heatmap.innerHTML = "";
+      for (let i = 0; i < 180; i++) {
+        const level = Math.floor(Math.random() * 5); // 0 to 4
+        const cell = document.createElement("div");
+        cell.className = `cell level-${level}`;
+        heatmap.appendChild(cell);
+      }
+    }
+
+    function generateTopics() {
+      const topics = [
+        "Array", "Binary Search", "DP", "Graph", "Heap", "Two Pointers",
+        "Sliding Window", "Tree", "Math", "Backtracking", "Greedy", "Hashing"
+      ];
+      const list = document.getElementById("topicsList");
+      list.innerHTML = "";
+      const selected = topics.sort(() => 0.5 - Math.random()).slice(0, 6);
+      selected.forEach(topic => {
+        const div = document.createElement("div");
+        div.className = "topic";
+        div.innerText = topic;
+        list.appendChild(div);
+      });
+    }
+
+    function fetchLeetCodeData() {
+      const username = document.getElementById("username").value.trim();
+      if (!username) return alert("Please enter a username.");
+
+      fetch(`https://leetcode-stats-api.herokuapp.com/${username}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.status === "error" || data.message === "user not found") {
+            alert("User not found!");
+            return;
+          }
+
+          document.getElementById("output").style.display = "block";
+          document.getElementById("userDisplay").innerText = `👤 ${username}`;
+          document.getElementById("rating").innerText = `🏆 Contest Rating: ${data.contestRating}`;
+          document.getElementById("solved").innerText = 
+            `✅ Solved: ${data.totalSolved} (Easy: ${data.easySolved}, Medium: ${data.mediumSolved}, Hard: ${data.hardSolved})`;
+
+          // Bar chart
+          const barCtx = document.getElementById("difficultyChart").getContext("2d");
+          if (window.barChart) window.barChart.destroy();
+          window.barChart = new Chart(barCtx, {
+            type: "bar",
+            data: {
+              labels: ["Easy", "Medium", "Hard"],
+              datasets: [{
+                label: "Problems Solved",
+                data: [data.easySolved, data.mediumSolved, data.hardSolved],
+                backgroundColor: ["#4caf50", "#2196f3", "#f44336"]
+              }]
+            },
+            options: { responsive: true }
+          });
+
+          // Line chart (simulated)
+          const trendCtx = document.getElementById("trendChart").getContext("2d");
+          if (window.trendChart) window.trendChart.destroy();
+          const trendData = Array.from({ length: 12 }, () => Math.floor(Math.random() * 100));
+          window.trendChart = new Chart(trendCtx, {
+            type: "line",
+            data: {
+              labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+              datasets: [{
+                label: "Submissions per Month",
+                data: trendData,
+                fill: true,
+                backgroundColor: "rgba(33,150,243,0.2)",
+                borderColor: "#2196f3",
+                tension: 0.2
+              }]
+            },
+            options: { responsive: true }
+          });
+
+          generateHeatmap();
+          generateTopics();
+        });
+    }
+  </script>
+</body>
+</html>
